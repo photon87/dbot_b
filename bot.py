@@ -24,54 +24,58 @@ class MyClient(discord.Client):
             self.token = file.readline()
 
     async def contest(self, message):
+        is_admin = False
         for role in message.author.roles:
             if str(role) == "Admin":
-                if self.in_contest:
-                    return
-                numbers = []
-                self.contest_time = -1
-                self.contest_time_left = -1
-                for word in message.content.split():
-                    if word.isdigit():
-                        numbers.append(int(word))
-                if len(numbers) == 1:
-                    self.in_contest = True
-                    self.contest_time = numbers[0]
-                    await message.channel.send(f"New contest started for the next {self.contest_time} seconds\nType !enter to enter.")
-                    self.contest_time_left = self.contest_time
-                    while self.contest_time_left > 0:
-                        await asyncio.sleep(1)
-                        self.contest_time_left -= 1
-                        await message.channel.send(f"{self.contest_time_left}")
-                    await message.channel.send(f"Time is up! {len(self.contest_entries)} entries.")
-                    self.in_contest = False
-                    if len(self.contest_entries) > 0:
-                        await asyncio.sleep(1)
-                        await message.channel.send(f"The winner is , {random.choice(self.contest_entries)}!!")
-                    self.contest_entries = []
-                    await message.channel.send("Contest is over.")
+                is_admin = True
+        if is_admin:
+            if self.in_contest:
+                return
+            numbers = []
+            self.contest_time = -1
+            self.contest_time_left = -1
+            for word in message.content.split():
+                if word.isdigit():
+                    numbers.append(int(word))
+            if len(numbers) == 1:
+                self.in_contest = True
+                self.contest_time = numbers[0]
+                await message.channel.send(f"New contest started for the next {self.contest_time} seconds\nType !enter to enter.")
+                self.contest_time_left = self.contest_time
+                while self.contest_time_left > 0:
+                    await asyncio.sleep(1)
+                    self.contest_time_left -= 1
+                    await message.channel.send(f"{self.contest_time_left}")
+                await message.channel.send(f"Time is up! {len(self.contest_entries)} entries.")
+                self.in_contest = False
+                if len(self.contest_entries) > 0:
+                    await asyncio.sleep(1)
+                    await message.channel.send(f"The winner is, {random.choice(self.contest_entries).mention}!!")
+                self.contest_entries = []
+                await message.channel.send("Contest is over.")
+        else:
+            if self.in_contest:
+                await message.channel.send(f"A contest is currently running with {self.contest_time_left} seconds left")
             else:
-                if self.in_contest:
-                    await message.channel.send(f"A contest is currently running with {self.contest_time_left} seconds left")
+                await message.channel.send("No contest currently running...")
 
     async def on_message(self, message):
         if message.author == self.user:
             return
 
         if message.content.find("!hello") != -1:
-            await message.channel.send("Hi")
+            await message.channel.send("Hi, "+message.author.mention)
 
         elif message.content.find("!commands") != -1:
             await message.channel.send(self.commands_string)
 
         elif message.content.find("!enter") != -1:
             if self.in_contest:
-                a = message.author.name
-                if a not in self.contest_entries:
-                    self.contest_entries.append(a)
-                    await message.channel.send(f"{a} entered")
+                if message.author not in self.contest_entries:
+                    self.contest_entries.append(message.author)
+                    await message.channel.send(f"{message.author.mention} entered")
                 else:
-                    await message.channel.send(f"{a} already entered")
+                    await message.channel.send(f"{message.author.mention} already entered")
             else:
                 await message.channel.send("No contest currently running...")
 
@@ -89,11 +93,12 @@ class MyClient(discord.Client):
             await message.channel.send(f"# of Members: {id.member_count}")
 
         elif message.content.find("!list") != -1:
-            lst = ""
-            for member in client.get_guild(self.server_id).members:
-                # yield member
-                lst += str(member) + ", "
-                await message.channel.send(f"{lst}")
+            members = await client.get_guild(self.server_id).fetch_members(limit=150).flatten()
+            response = f"{len(members)} users on this Server:```"
+            for member in members:
+                response += f"\n{member.name}"
+            response += "```"
+            await message.channel.send(response)
 
         elif message.content.find("!test") != -1:
             await message.channel.send(f"Testing 1... 2... 3...")

@@ -1,2 +1,4 @@
 # dbot_b
-test discord bot
+Test Discord bot
+
+Requires a token.txt file with your Discord bot token.
